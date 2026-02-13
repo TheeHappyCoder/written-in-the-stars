@@ -1,6 +1,6 @@
 import type { ConstellationData } from '../data';
 import { buildShareURL } from '../data';
-import { generateConstellation } from '../constellation';
+import { generateConstellation, normalizePositions } from '../constellation';
 import { ConstellationRenderer } from '../renderer';
 
 const THEMES = [
@@ -322,8 +322,9 @@ export function createView(app: HTMLElement) {
 
     // Include custom positions if the user arranged stars
     if (customPositions && customPositions.length === sentences.length) {
-      // Round to 3 decimal places to keep URL compact
-      data.pos = customPositions.map(([x, y]) => [
+      // Normalize to safe bounds, then round for compact URLs
+      const normalized = normalizePositions(customPositions);
+      data.pos = normalized.map(([x, y]) => [
         Math.round(x * 1000) / 1000,
         Math.round(y * 1000) / 1000,
       ]);

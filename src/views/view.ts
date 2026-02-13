@@ -1,6 +1,6 @@
 import type { ConstellationData } from '../data';
 import { decode, splitSentences } from '../data';
-import { generateConstellation } from '../constellation';
+import { generateConstellation, normalizePositions } from '../constellation';
 import { ConstellationRenderer } from '../renderer';
 
 const THEME_CLASS: Record<ConstellationData['theme'], string> = {
@@ -28,7 +28,11 @@ export function viewPage(app: HTMLElement) {
   document.documentElement.className = THEME_CLASS[data.theme] || '';
 
   const sentences = splitSentences(data.message);
-  const constellation = generateConstellation(sentences, window.innerWidth, window.innerHeight, data.pos ?? undefined);
+  // Normalize custom positions to ensure they fit within safe bounds
+  const customPos = data.pos && data.pos.length === sentences.length
+    ? normalizePositions(data.pos)
+    : undefined;
+  const constellation = generateConstellation(sentences, window.innerWidth, window.innerHeight, customPos);
 
   const now = new Date();
   const isValentines = now.getMonth() === 1 && now.getDate() === 14;

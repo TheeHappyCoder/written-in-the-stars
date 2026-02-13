@@ -103,13 +103,78 @@ export function generateConstellation(
   return { stars, connections };
 }
 
+/**
+ * Map normalized star coordinates (0-1) to pixel coordinates.
+ * Uses aspect-ratio-preserving mapping: fits a square region
+ * into the canvas so the constellation shape is never distorted.
+ */
 export function starToPixel(
   star: Star,
   canvasWidth: number,
   canvasHeight: number
 ): { px: number; py: number } {
+  const size = Math.min(canvasWidth, canvasHeight);
+  const offsetX = (canvasWidth - size) / 2;
+  const offsetY = (canvasHeight - size) / 2;
   return {
-    px: star.x * canvasWidth,
-    py: star.y * canvasHeight,
+    px: offsetX + star.x * size,
+    py: offsetY + star.y * size,
   };
+}
+
+/**
+ * Reverse of starToPixel — convert pixel coords back to normalized 0-1.
+ */
+export function pixelToStar(
+  px: number,
+  py: number,
+  canvasWidth: number,
+  canvasHeight: number
+): { x: number; y: number } {
+  const size = Math.min(canvasWidth, canvasHeight);
+  const offsetX = (canvasWidth - size) / 2;
+  const offsetY = (canvasHeight - size) / 2;
+  return {
+    x: (px - offsetX) / size,
+    y: (py - offsetY) / size,
+  };
+}
+
+/**
+ * Normalize an array of positions so they all fit within a safe
+ * padded zone (default 0.08 to 0.92). Preserves relative layout.
+ */
+export function normalizePositions(
+  positions: [number, number][],
+  pad = 0.08
+): [number, number][] {
+  if (positions.length === 0) return positions;
+  if (positions.length === 1) {
+    return [[0.5, 0.5]];
+  }
+
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  for (const [x, y] of positions) {
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+
+  const rangeX = maxX - minX || 1;
+  const rangeY = maxY - minY || 1;
+  const usable = 1 - pad * 2;
+
+  // Scale uniformly to preserve shape, then center
+  const scale = usable / Math.max(rangeX, rangeY);
+  const scaledW = rangeX * scale;
+  const scaledH = rangeY * scale;
+  const offX = pad + (usable - scaledW) / 2;
+  const offY = pad + (usable - scaledH) / 2;
+
+  return positions.map(([x, y]) => [
+    offX + (x - minX) * scale,
+    offY + (y - minY) * scale,
+  ]);
 }

@@ -1,5 +1,5 @@
 import type { Constellation } from './constellation';
-import { starToPixel } from './constellation';
+import { starToPixel, pixelToStar } from './constellation';
 
 interface RenderState {
   revealedCount: number;
@@ -140,8 +140,9 @@ export class ConstellationRenderer {
 
     if (this.draggingIndex !== null) {
       const star = this.constellation.stars[this.draggingIndex];
-      star.x = Math.max(0.05, Math.min(0.95, cx / w));
-      star.y = Math.max(0.05, Math.min(0.95, cy / h));
+      const norm = pixelToStar(cx, cy, w, h);
+      star.x = Math.max(0.05, Math.min(0.95, norm.x));
+      star.y = Math.max(0.05, Math.min(0.95, norm.y));
       this.canvas.style.cursor = 'grabbing';
 
       if (this.onDragMove) {
