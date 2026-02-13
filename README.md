@@ -4,7 +4,7 @@ Turn love messages into interactive constellations. Each sentence becomes a star
 
 **[Live Demo](https://written-in-stars.vercel.app)**
 
-![Written in the Stars — Create page with mobile preview](preview.png)
+![Written in the Stars — Create page with mobile preview](public/preview.png)
 
 ---
 
