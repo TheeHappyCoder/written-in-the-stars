@@ -1,7 +1,10 @@
 import './style.css';
+import { inject } from '@vercel/analytics';
 import { StarField } from './starfield';
 import { createView } from './views/create';
 import { viewPage } from './views/view';
+
+inject();
 
 function getRoute(): 'create' | 'view' {
   const params = new URLSearchParams(window.location.search);
