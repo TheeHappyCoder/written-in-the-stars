@@ -5,6 +5,7 @@ export interface ConstellationData {
   from: string;
   message: string;
   theme: 'gold' | 'rose' | 'arctic' | 'aurora';
+  pos?: [number, number][];
 }
 
 export function splitSentences(text: string): string[] {
@@ -45,6 +46,7 @@ export function decode(encoded: string): ConstellationData | null {
     if (!json) return null;
     const data = JSON.parse(json);
     if (!data.to || !data.from || !data.message || !data.theme) return null;
+    if (data.pos && !Array.isArray(data.pos)) delete data.pos;
     return data as ConstellationData;
   } catch {
     return null;

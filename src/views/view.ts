@@ -28,7 +28,13 @@ export function viewPage(app: HTMLElement) {
   document.documentElement.className = THEME_CLASS[data.theme] || '';
 
   const sentences = splitSentences(data.message);
-  const constellation = generateConstellation(sentences, window.innerWidth, window.innerHeight);
+  const constellation = generateConstellation(sentences, window.innerWidth, window.innerHeight, data.pos ?? undefined);
+
+  const now = new Date();
+  const isValentines = now.getMonth() === 1 && now.getDate() === 14;
+  const footerMessage = isValentines
+    ? "Happy Valentine's Day"
+    : 'Written in the stars, meant for you';
 
   app.innerHTML = `
     <div class="view-page">
@@ -39,13 +45,33 @@ export function viewPage(app: HTMLElement) {
       </div>
 
       <div class="view-hint hidden" id="view-hint">
-        <p>touch the stars to read the message</p>
+        <p>tap the brightest star to begin</p>
       </div>
 
       <div class="view-footer hidden" id="view-footer">
-        <p class="footer-valentine">Happy Valentine's Day</p>
+        <p class="footer-valentine">${footerMessage}</p>
         <p class="footer-names">To ${escapeHtml(data.to)}, with love from ${escapeHtml(data.from)}</p>
-        <a href="${window.location.origin}${window.location.pathname}" class="footer-create">Write your own constellation</a>
+        <div class="footer-actions">
+          <button type="button" class="footer-btn" id="btn-show-card">read the full message</button>
+          <span class="footer-dot">&#183;</span>
+          <a href="${window.location.origin}${window.location.pathname}?replyTo=${encodeURIComponent(data.from)}" class="footer-btn">write ${escapeHtml(data.from)} back</a>
+          <span class="footer-dot">&#183;</span>
+          <a href="${window.location.origin}${window.location.pathname}" class="footer-btn">write your own</a>
+        </div>
+      </div>
+
+      <div class="completion-overlay hidden" id="completion-overlay">
+        <div class="completion-card">
+          <div class="completion-flourish">&#10022;</div>
+          <div class="completion-message">
+            ${sentences.map(s => `<p>${escapeHtml(s)}</p>`).join('')}
+          </div>
+          <div class="completion-divider"></div>
+          <p class="completion-tagline">${footerMessage}</p>
+          <p class="completion-names">To ${escapeHtml(data.to)}, with love from ${escapeHtml(data.from)}</p>
+          <a href="${window.location.origin}${window.location.pathname}?replyTo=${encodeURIComponent(data.from)}" class="completion-reply">Write ${escapeHtml(data.from)} back</a>
+          <button type="button" class="completion-dismiss" id="completion-dismiss">see your constellation</button>
+        </div>
       </div>
     </div>
   `;
@@ -54,15 +80,56 @@ export function viewPage(app: HTMLElement) {
   const intro = document.getElementById('view-intro')!;
   const hint = document.getElementById('view-hint')!;
   const footer = document.getElementById('view-footer')!;
+  const completionOverlay = document.getElementById('completion-overlay')!;
+  const completionDismiss = document.getElementById('completion-dismiss')!;
 
   const renderer = new ConstellationRenderer(canvas);
   renderer.setConstellation(constellation, () => {
+    // onRevealComplete: all stars visible, show hint
     hint.classList.remove('hidden');
     hint.classList.add('fade-in');
     setTimeout(() => {
+      hint.classList.add('fade-out');
+      setTimeout(() => hint.classList.add('hidden'), 1000);
       footer.classList.remove('hidden');
       footer.classList.add('fade-in');
-    }, 2000);
+    }, 3000);
+  }, () => {
+    // onAllRead: all stars tapped — show the completion card after a beat
+    setTimeout(() => {
+      footer.classList.add('hidden');
+      hint.classList.add('hidden');
+      completionOverlay.classList.remove('hidden');
+      completionOverlay.classList.add('fade-in');
+    }, 1500);
+  });
+
+  const btnShowCard = document.getElementById('btn-show-card')!;
+
+  // Dismiss completion card to see the full constellation behind it
+  completionDismiss.addEventListener('click', () => {
+    completionOverlay.classList.add('fade-out');
+    completionOverlay.classList.remove('fade-in');
+    setTimeout(() => {
+      completionOverlay.classList.add('hidden');
+      completionOverlay.classList.remove('fade-out');
+      footer.classList.remove('hidden');
+      footer.classList.add('fade-in');
+      footer.classList.remove('fade-out');
+    }, 1000);
+  });
+
+  // Re-show the completion card from footer
+  btnShowCard.addEventListener('click', () => {
+    footer.classList.add('fade-out');
+    footer.classList.remove('fade-in');
+    setTimeout(() => {
+      footer.classList.add('hidden');
+      footer.classList.remove('fade-out');
+      completionOverlay.classList.remove('hidden');
+      completionOverlay.classList.add('fade-in');
+      completionOverlay.classList.remove('fade-out');
+    }, 500);
   });
 
   // Sequence: intro text -> pause -> start revealing stars

@@ -16,6 +16,13 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
+// Classic parametric heart curve
+function heartPoint(t: number): { x: number; y: number } {
+  const x = 16 * Math.pow(Math.sin(t), 3);
+  const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+  return { x, y };
+}
+
 export interface Star {
   x: number;
   y: number;
@@ -31,45 +38,66 @@ export interface Constellation {
 export function generateConstellation(
   sentences: string[],
   _width: number,
-  _height: number
+  _height: number,
+  customPositions?: [number, number][]
 ): Constellation {
   const seed = hashString(sentences.join(''));
   const rng = mulberry32(seed);
 
-  const padding = 0.12;
-  const minDist = 0.15;
-
+  const n = sentences.length;
   const stars: Star[] = [];
 
-  for (const sentence of sentences) {
+  // Use custom positions if provided and valid
+  const useCustom = customPositions && customPositions.length === n;
+
+  // Place stars along a heart curve
+  // Distribute evenly around the heart (t goes from 0 to 2π)
+  // Start from the bottom point of the heart for a nice reading flow
+  const padding = 0.15;
+  const usableW = 1 - 2 * padding;
+  const usableH = 1 - 2 * padding;
+
+  // Heart curve bounds: x roughly [-16, 16], y roughly [-17, 15]
+  const hMinX = -16, hMaxX = 16;
+  const hMinY = -17, hMaxY = 15;
+  const hRangeX = hMaxX - hMinX;
+  const hRangeY = hMaxY - hMinY;
+
+  for (let i = 0; i < n; i++) {
     let x: number, y: number;
-    let attempts = 0;
 
-    do {
-      x = padding + rng() * (1 - 2 * padding);
-      y = padding + rng() * (1 - 2 * padding);
-      attempts++;
-    } while (
-      attempts < 100 &&
-      stars.some(s => Math.hypot(s.x - x, s.y - y) < minDist)
-    );
+    if (useCustom) {
+      x = customPositions[i][0];
+      y = customPositions[i][1];
+    } else {
+      // Distribute stars evenly along the heart curve
+      // Start from bottom tip (t = π) and go clockwise
+      const t = Math.PI + (i / n) * Math.PI * 2;
+      const hp = heartPoint(t);
 
-    const wordCount = sentence.split(/\s+/).length;
+      // Normalize to 0-1 range with padding
+      x = padding + ((hp.x - hMinX) / hRangeX) * usableW;
+      y = padding + ((hp.y - hMinY) / hRangeY) * usableH;
+
+      // Add small seeded randomness so it's not perfectly mechanical
+      x += (rng() - 0.5) * 0.03;
+      y += (rng() - 0.5) * 0.03;
+
+      // Clamp
+      x = Math.max(padding * 0.5, Math.min(1 - padding * 0.5, x));
+      y = Math.max(padding * 0.5, Math.min(1 - padding * 0.5, y));
+    }
+
+    const wordCount = sentences[i].split(/\s+/).length;
     const size = 0.7 + Math.min(wordCount / 15, 0.6);
 
-    stars.push({ x, y, size, sentence });
+    stars.push({ x, y, size, sentence: sentences[i] });
   }
 
+  // Sequential connections — the reading order traces the heart
   const connections: [number, number][] = [];
   for (let i = 0; i < stars.length - 1; i++) {
     connections.push([i, i + 1]);
-  }
-
-  if (stars.length >= 4) {
-    connections.push([0, Math.floor(stars.length / 2)]);
-  }
-  if (stars.length >= 6) {
-    connections.push([Math.floor(stars.length / 3), stars.length - 1]);
   }
 
   return { stars, connections };
